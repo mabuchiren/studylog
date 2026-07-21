@@ -1,1 +1,976 @@
-aaaaaa
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="studyLog">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<title>studyLog</title>
+<style>
+/* ============================================================
+   デザイントークン
+   ============================================================ */
+:root{
+  --bg:#FFFFFF; --bg-2:#FAFAFA; --border:#E5E5E5; --hover:#F5F5F5;
+  --text:#0A0A0A; --text-2:#737373; --text-ph:#A3A3A3;
+  --btn:#000000; --dark:#171717; --dark-text:#FAFAFA;
+  --accent:#39FF14;
+  /* 角丸は使わない。面もアクションも直角で通す */
+  --r-sm:0; --r-md:0; --r-lg:0; --r-pill:0;
+  --mono:"SF Mono",Menlo,Consolas,"Cascadia Code",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+[hidden]{display:none !important;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:Inter,"Noto Sans JP",-apple-system,"Segoe UI",
+    "Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
+  background:var(--bg); color:var(--text);
+  font-size:14px; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+input,select{font-family:inherit;font-size:inherit;color:var(--text);}
+.mono{font-family:var(--mono);}
+
+/* ============================================================
+   ローンチ画面
+   ============================================================ */
+.launch{
+  position:fixed;inset:0;z-index:100;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .34s ease-in;
+}
+.launch.out{opacity:0;}
+.launch-logo{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);}
+.launch-dots{display:flex;gap:6px;margin-top:16px;}
+.launch-dots i{width:5px;height:5px;background:var(--text);opacity:.22;
+  animation:ldot .9s ease-in-out infinite;}
+.launch-dots i:nth-child(2){animation-delay:.16s;}
+.launch-dots i:nth-child(3){animation-delay:.32s;}
+@keyframes ldot{0%,80%,100%{opacity:.22}40%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.launch-dots i{animation:none;opacity:.5;}}
+
+/* ============================================================
+   骨格
+   ============================================================ */
+/* 1画面に収める。dvh未対応の古い環境は vh にフォールバック */
+.wrap{max-width:520px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+.tabbar{
+  display:flex;align-items:center;gap:2px;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 0 10px;
+  border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;
+}
+.tab{
+  padding:10px 14px 7px;font-size:14px;color:var(--text-2);
+  border-bottom:3px solid transparent;transition:color .15s;
+}
+.tab.active{color:var(--text);font-weight:600;border-bottom-color:var(--accent);}
+.page{display:none;flex:1;min-height:0;flex-direction:column;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.page.visible{display:flex;}
+
+/* ============================================================
+   共通パーツ
+   ============================================================ */
+/* flex:none — 高さが足りない時にカードが潰れず、ページ側がスクロールで逃げる */
+.card{flex:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px;margin-bottom:8px;}
+.card-h{font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.4;}
+.card-h2{font-size:13px;font-weight:600;margin:11px 0 8px;line-height:1.4;}
+.note{font-size:12px;color:var(--text-2);}
+.segments{display:flex;flex-wrap:wrap;gap:6px;}
+.seg{
+  height:34px;padding:0 14px;border-radius:var(--r-pill);
+  border:1px solid var(--border);background:var(--bg);color:var(--text);
+  font-size:13px;transition:background .15s,border-color .15s,color .15s;
+}
+.seg:hover{background:var(--hover);}
+.seg.active{background:var(--btn);color:#fff;border-color:var(--btn);}
+.btn{
+  flex:none;height:52px;border-radius:var(--r-pill);background:var(--btn);color:#fff;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.btn:hover{background:#262626;}
+.btn-ghost{background:var(--bg);color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--hover);}
+.btn-sm{height:38px;font-size:13px;}
+input[type=text],input[type=number]{
+  width:100%;height:42px;padding:0 14px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--r-md);
+  outline:none;transition:border-color .15s;
+}
+input[type=text]:focus,input[type=number]:focus{border-color:var(--text);}
+input::placeholder{color:var(--text-ph);}
+select{
+  width:100%;height:44px;padding:0 10px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--r-md);outline:none;
+}
+.spacer{flex:1;min-height:16px;}
+
+/* ============================================================
+   時刻・固定セッション表
+   ============================================================ */
+/* タブと同じ大きさ・太さで、ベースラインもタブに揃える */
+.clocknow{
+  margin-left:auto;padding-bottom:10px;
+  font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text);
+}
+input[type=text].goalinput{
+  flex:none;width:100%;height:42px;padding:0 2px;margin-bottom:11px;
+  border:none;border-bottom:1px solid var(--border);border-radius:0;
+  background:transparent;outline:none;transition:border-color .15s;
+}
+input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:var(--text);}
+.slothead{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+.slot{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.slot:last-child{border-bottom:none;}
+.slot-name{font-size:13px;width:2.2em;}
+.slot-len{font-size:12px;color:var(--text-2);}
+/* 済=黒く塗る / 未=白のまま。分数は出さない */
+.slot-box{
+  margin-left:auto;width:18px;height:18px;border-radius:0;
+  border:1px solid var(--border);background:var(--bg);
+  transition:background .15s,border-color .15s;
+}
+.slot-box.done{background:var(--btn);border-color:var(--btn);}
+.nextline{margin-left:auto;font-size:13px;color:var(--text-2);}
+.nextline .mono{font-size:13px;color:var(--text);}
+
+/* --- セッション終了後のストリップ --- */
+.strip{flex:none;border:1px solid var(--text);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:10px;}
+.strip-row{display:flex;align-items:center;gap:8px;font-size:13px;}
+.strip-row+.strip-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.strip-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.linkbtn{margin-left:auto;flex:none;font-size:13px;color:var(--text-2);text-decoration:underline;}
+.linkbtn:hover{color:var(--text);}
+.seg-xs{height:32px;padding:0 13px;font-size:12px;}
+
+/* ============================================================
+   タイマー実行画面
+   ============================================================ */
+.runbox{
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:22px 16px;text-align:center;
+  transition:background .12s,border-color .12s;
+}
+/* 0到達後は面ごとダークに反転させ、戻るまで「終わっている」と分かる状態にする */
+.runbox.over{background:var(--dark);border-color:var(--dark);}
+.runbox.over .run-goal,.runbox.over .run-num{color:var(--dark-text);}
+.runbox.over .run-sub,.runbox.over .run-tag{color:var(--text-ph);}
+/* 0到達の瞬間だけ、白に振り戻して点滅させる */
+.runbox.over.pulse{background:var(--bg);border-color:var(--text);}
+.runbox.over.pulse .run-goal,.runbox.over.pulse .run-num{color:var(--text);}
+.runbox.over.pulse .run-sub,.runbox.over.pulse .run-tag{color:var(--text-2);}
+.run-goal,.run-num{transition:color .12s;}
+.run-goal{font-size:14px;margin-bottom:4px;word-break:break-word;}
+.run-sub{font-size:12px;color:var(--text-2);transition:color .12s;}
+.run-num{font-family:var(--mono);font-size:52px;line-height:1.1;margin:10px 0 4px;letter-spacing:-.02em;}
+/* 実行中は残りの高さを使い切って縦中央に置く */
+#runView{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+#runView[hidden]{display:none;}
+.run-tag{font-size:12px;color:var(--text-2);min-height:1.4em;transition:color .12s;}
+
+/* ============================================================
+   ダークパネル
+   ============================================================ */
+.panel{
+  flex:none;background:var(--dark);border-radius:var(--r-lg);padding:16px;margin-top:8px;
+  transition:background .18s;
+}
+.panel-h{display:flex;justify-content:space-between;align-items:center;}
+.panel-lbl{font-size:11px;color:var(--text-ph);letter-spacing:.06em;}
+.panel-num{font-family:var(--mono);font-size:32px;color:var(--text-ph);margin:6px 0 4px;line-height:1.1;
+  transform-origin:left center;transition:color .15s,transform .12s cubic-bezier(.25,1,.5,1);}
+.panel-num.pop{transform:scale(1.07);}
+.panel-num .unit{font-family:inherit;font-size:inherit;margin-left:2px;}
+.panel-num.lit{color:var(--accent);}
+.panel-sub{font-size:11px;color:var(--text-ph);}
+.gauge{position:relative;height:6px;background:#3a3a3a;border-radius:var(--r-pill);margin-top:8px;
+  transition:background .18s;}
+.gauge-fill{height:100%;background:var(--accent);border-radius:var(--r-pill);width:0;
+  transition:width .45s cubic-bezier(.25,1,.5,1),background .18s;}
+.gauge-tick{position:absolute;left:50%;top:-2px;width:2px;height:10px;background:var(--dark-text);opacity:.6;
+  transition:background .18s;}
+
+/* 節目(90分・180分)を跨いだ瞬間だけ、パネルを反転させる */
+.panel.flash{background:var(--accent);}
+.panel.flash .panel-lbl,
+.panel.flash .panel-foot,
+.panel.flash .panel-week,
+.panel.flash .panel-num{color:#0A0A0A;}
+.panel.flash .panel-week{border-top-color:rgba(10,10,10,.25);}
+.panel.flash .gauge{background:rgba(10,10,10,.2);}
+.panel.flash .gauge-fill,
+.panel.flash .gauge-tick{background:#0A0A0A;}
+#streakTxt.risk,#bestTxt.risk{color:var(--dark-text);}
+.panel-foot{font-size:11px;color:var(--text-ph);margin-top:8px;}
+.panel-week{
+  display:flex;justify-content:space-between;
+  border-top:1px solid #3a3a3a;margin-top:8px;padding-top:7px;
+  font-size:11px;color:var(--text-ph);
+}
+
+/* ============================================================
+   記録ページ
+   ============================================================ */
+.datenav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.datenav button{width:36px;height:36px;border-radius:var(--r-pill);font-size:16px;color:var(--text-2);}
+.datenav button:hover{background:var(--hover);}
+.datenav button:disabled{color:var(--border);cursor:default;background:none;}
+.datenav .d{font-size:14px;font-weight:600;}
+.totrow{display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);padding-bottom:4px;}
+.srow{border-bottom:1px solid var(--border);}
+.srow-top{display:flex;justify-content:space-between;align-items:center;padding:12px 0;cursor:pointer;}
+.chip{padding:2px 8px;border-radius:var(--r-pill);border:1px solid var(--border);font-size:11px;}
+.srow-t{font-size:12px;color:var(--text-2);margin-left:8px;}
+.srow-m{font-family:var(--mono);font-size:13px;}
+.editbox{padding:0 0 12px;display:flex;flex-direction:column;gap:8px;}
+.editbox .r{display:flex;gap:8px;}
+.empty{font-size:12px;color:var(--text-ph);text-align:center;padding:24px 0;}
+.foot{font-size:12px;color:var(--text-ph);text-align:center;padding:12px 0;}
+</style>
+</head>
+<body>
+
+<div class="launch" id="launch">
+  <span class="launch-logo">studyLog</span>
+  <div class="launch-dots"><i></i><i></i><i></i></div>
+</div>
+
+<div class="wrap">
+
+<div class="tabbar">
+  <button class="tab active" data-page="home">ホーム</button>
+  <button class="tab" data-page="rec">記録</button>
+  <button class="tab" data-page="set">設定</button>
+  <span class="clocknow" id="clockNow">--:--</span>
+</div>
+
+<!-- ===== ホーム ===== -->
+<section class="page visible" id="page-home">
+
+  <!-- 復帰ダイアログ -->
+  <div class="card" id="staleBox" hidden>
+    <div class="card-h">前回の計測が残っています</div>
+    <div class="note" id="staleInfo"></div>
+    <div class="r" style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-sm" style="flex:1;" id="staleResume">続きから再開</button>
+      <button class="btn btn-sm btn-ghost" style="flex:1;" id="staleDrop">破棄する</button>
+    </div>
+  </div>
+
+  <!-- 設定画面 -->
+  <div id="setupView">
+
+    <!-- 直前のセッションの結果 -->
+    <div class="strip" id="resultBox" hidden>
+      <div class="strip-row">
+        <span class="strip-txt" id="resultText"></span>
+        <button class="linkbtn" id="undoBtn">取り消し</button>
+      </div>
+      <div class="strip-row" id="goalRow" hidden>
+        <span class="strip-txt" id="goalAsk"></span>
+        <span style="display:flex;gap:6px;margin-left:auto;flex:none;">
+          <button class="seg seg-xs" id="doneYes">できた</button>
+          <button class="seg seg-xs" id="doneNo">途中</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">科目</div>
+      <div class="segments" id="segSubj"></div>
+      <div class="card-h2">時間</div>
+      <div class="segments">
+        <span id="segMin" style="display:contents;"></span>
+        <input type="number" id="freeMin" inputmode="numeric" autocomplete="off"
+               spellcheck="false" min="1" max="600" placeholder="分"
+               class="mono" style="width:78px;height:34px;border-radius:var(--r-pill);
+               padding:0 12px;text-align:center;">
+      </div>
+      <div class="card-h2">やること(任意)</div>
+      <input type="text" id="goalInput" class="goalinput" maxlength="60" autocomplete="off"
+             placeholder="例:数学のワーク p.42〜45">
+      <button class="btn" id="startBtn" style="width:100%;">計測を開始</button>
+    </div>
+
+    <div class="card" id="slotCard" style="margin-bottom:0;">
+      <div class="slothead">
+        <span class="card-h" style="margin:0;">今日の固定セッション</span>
+        <span class="nextline" id="nextLine"></span>
+      </div>
+      <div class="slot" id="slotAM">
+        <span class="slot-name">朝</span>
+        <span class="slot-len">45分</span>
+        <span class="slot-box" id="stateAM"></span>
+      </div>
+      <div class="slot" id="slotPM">
+        <span class="slot-name">夜</span>
+        <span class="slot-len">45分</span>
+        <span class="slot-box" id="statePM"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 実行画面 -->
+  <div id="runView" hidden>
+    <div class="runbox" id="runBox">
+      <div class="run-goal" id="runGoal"></div>
+      <div class="run-sub" id="runSubj"></div>
+      <div class="run-num mono" id="runNum">00:00</div>
+      <div class="run-tag" id="runTag"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-ghost" id="pauseBtn" style="flex:1;">一時停止</button>
+      <button class="btn" id="stopBtn" style="flex:2;">終了して記録</button>
+    </div>
+    <div class="strip" id="askBox" hidden style="margin-top:12px;margin-bottom:0;">
+      <div class="strip-row"><span class="strip-txt" id="askTxt"></span></div>
+      <div class="strip-row" style="gap:6px;">
+        <button class="seg seg-xs" id="askKeep">続けている</button>
+        <button class="seg seg-xs" id="askStop">ここで終了</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer" id="spacer"></div>
+
+  <!-- ダークパネル -->
+  <div class="panel">
+    <div class="panel-h">
+      <span class="panel-lbl" id="panelLbl">TODAY</span>
+      <span class="panel-lbl">目標 180分</span>
+    </div>
+    <div class="panel-num mono" id="panelNum">0:00</div>
+    <div class="gauge"><div class="gauge-fill" id="gaugeFill"></div><div class="gauge-tick"></div></div>
+    <div class="panel-foot" id="panelFoot"></div>
+    <div class="panel-week" id="panelWeek">
+      <span>今週 <span class="mono" id="weekTotal">0:00</span></span>
+      <span id="bestTxt" hidden></span>
+      <span id="streakTxt">連続 0日</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 記録 ===== -->
+<section class="page" id="page-rec">
+  <div class="datenav">
+    <button id="prevDay">‹</button>
+    <span class="d" id="recDate"></span>
+    <button id="nextDay">›</button>
+  </div>
+  <div class="totrow"><span>セッション</span><span>合計 <span class="mono" id="recTotal">0:00</span></span></div>
+  <div id="sessList"></div>
+
+  <button class="btn btn-sm" id="addBtn" style="width:100%;margin-top:14px;">+ あとから手入力</button>
+  <div class="card" id="addForm" hidden style="margin-top:10px;">
+    <select id="mSubj"></select>
+    <div class="segments" id="mSegs" style="margin-top:10px;"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+      <input type="number" id="mMin" class="mono" inputmode="numeric" autocomplete="off"
+             spellcheck="false" min="1" max="600" value="45" style="width:90px;">
+      <span class="note">分</span>
+      <button class="btn btn-sm" id="mSave" style="flex:1;">記録する</button>
+    </div>
+  </div>
+  <div class="note" style="text-align:center;margin-top:8px;">塾・自習室のぶんは帰宅後すぐ入力</div>
+</section>
+
+<!-- ===== 設定 ===== -->
+<section class="page" id="page-set">
+  <div class="card">
+    <div class="card-h">使い方</div>
+    <div class="note">
+      1. Safariでこのページを開く<br>
+      2. 共有 → ホーム画面に追加<br>
+      3. Wi-Fiを切って運用する<br>
+      4. アクセスガイドを保護者と設定する
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h">データ</div>
+    <button class="btn btn-sm btn-ghost" id="wipeBtn" style="width:100%;">全データを削除</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="foot">studyLog v1.0</div>
+</section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   定数
+   ============================================================ */
+var KEY="studyLog_v1";
+var SUBJ=["英語","数学","理科","社会","国語","塾・宿題"];
+var PRESETS=[15,25,45,60];
+var GOAL_MIN=180, LINE_MIN=90;
+var STALE_MS=8*3600*1000;
+var ASK_AFTER_MS=60*60*1000;   /* 予定を60分超えたら生存確認する */
+var LAUNCH_MS=900,LAUNCH_FADE_MS=340;
+var RESHOW_AFTER_MS=30*60*1000; /* これ以上離れて戻った時だけ再表示 */
+var SLOTS={am:{from:5,to:11},pm:{from:17,to:23}};
+
+/* ============================================================
+   ストレージ(安全ラッパー)
+   ============================================================ */
+var store={
+  get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},
+  set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},
+  remove:function(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+function defaults(){return{schemaVersion:1,sessions:[],settings:{lastSubject:SUBJ[0],lastMin:45},running:null};}
+var state=defaults();
+(function load(){
+  try{
+    var raw=store.get(KEY); if(!raw) return;
+    var p=JSON.parse(raw); if(!p||typeof p!=="object") return;
+    if(Array.isArray(p.sessions)) state.sessions=p.sessions.filter(function(s){
+      return s&&typeof s.min==="number"&&s.min>0&&typeof s.date==="string";
+    });
+    if(p.settings&&typeof p.settings==="object"){
+      if(SUBJ.indexOf(p.settings.lastSubject)>=0) state.settings.lastSubject=p.settings.lastSubject;
+      if(typeof p.settings.lastMin==="number") state.settings.lastMin=p.settings.lastMin;
+    }
+    if(p.running&&typeof p.running.startTs==="number") state.running=p.running;
+  }catch(e){}
+})();
+function save(){store.set(KEY,JSON.stringify(state));}
+
+/* ============================================================
+   時刻ユーティリティ(1日の境界は午前3時)
+   ============================================================ */
+function baseDate(ts){return new Date((ts||Date.now())-3*3600*1000);}
+function dayKey(ts){var d=baseDate(ts);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function keyToLabel(k){
+  var p=k.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]),w=["日","月","火","水","木","金","土"];
+  return (d.getMonth()+1)+"月"+d.getDate()+"日("+w[d.getDay()]+")";
+}
+function shiftKey(k,n){var p=k.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]+n);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fmtHM(m){return Math.floor(m/60)+":"+String(m%60).padStart(2,"0");}
+/* 画面内の「量」はすべて分で数える。1時間半は90分 */
+function fmtDur(m){return m+"分";}
+function fmtMS(ms){
+  var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s/60)%60,q=s%60;
+  return (h>0? h+":"+String(m).padStart(2,"0") : String(m).padStart(2,"0"))+":"+String(q).padStart(2,"0");
+}
+function clockStr(ts){var d=new Date(ts);return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");}
+
+/* ============================================================
+   タイマー中核 — Date.now() 差分方式
+   pausedTotalMs を差し引いた「実効現在時刻」で全部を計算する
+   ============================================================ */
+function effNow(){
+  var r=state.running; if(!r) return Date.now();
+  var paused=r.pausedTotalMs+(r.pauseStartTs?Date.now()-r.pauseStartTs:0);
+  return Date.now()-paused;
+}
+function elapsedMs(){var r=state.running; return r?Math.max(0,effNow()-r.startTs):0;}
+function remainMs(){var r=state.running; return r?r.endTs-effNow():0;}
+function isPaused(){return !!(state.running&&state.running.pauseStartTs);}
+
+/* --- 画面の自動ロック抑止 ------------------------------------
+   計測中は机の上の置き時計として使うので、消灯させない。
+   取得はユーザー操作の中でしか通らないため開始ボタン起点で呼ぶ。
+   画面を裏に回すとOSが勝手に解放するので、復帰時に取り直す。
+   ------------------------------------------------------------ */
+var wakeLock=null;
+function requestWake(){
+  try{
+    if(!navigator.wakeLock||wakeLock) return;
+    navigator.wakeLock.request("screen").then(function(w){
+      wakeLock=w;
+      w.addEventListener("release",function(){wakeLock=null;});
+    },function(){});
+  }catch(e){}
+}
+function releaseWake(){
+  try{ if(wakeLock){wakeLock.release();wakeLock=null;} }catch(e){}
+}
+
+var audioCtx=null;
+function primeAudio(){
+  try{
+    if(!audioCtx){var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; audioCtx=new AC();}
+    if(audioCtx.state==="suspended") audioCtx.resume();
+  }catch(e){}
+}
+/* 消音スイッチだと音は鳴らないので、画面側を主たる合図にする。
+   白⇄ダークを3往復させてから、ダークのまま留める */
+function alertZero(){
+  var b=$("runBox"),n=0;
+  var t=setInterval(function(){
+    b.classList.toggle("pulse");
+    if(++n>=6){clearInterval(t);b.classList.remove("pulse");}
+  },170);
+}
+function beep(){
+  if(!audioCtx) return;
+  try{
+    var t=audioCtx.currentTime,osc=audioCtx.createOscillator(),g=audioCtx.createGain();
+    osc.type="sine"; osc.frequency.setValueAtTime(880,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.3,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t+0.52);
+  }catch(e){}
+}
+
+function startSession(min,subject,goal){
+  primeAudio(); requestWake();
+  var now=Date.now();
+  state.running={subject:subject,goal:goal||"",planMin:min,startTs:now,
+    endTs:now+min*60000,pausedTotalMs:0,pauseStartTs:null,beeped:false,
+    askAfterMs:min*60000+ASK_AFTER_MS};
+  save(); render();
+}
+function togglePause(){
+  var r=state.running; if(!r) return;
+  if(r.pauseStartTs){ r.pausedTotalMs+=Date.now()-r.pauseStartTs; r.pauseStartTs=null; requestWake(); }
+  else { r.pauseStartTs=Date.now(); releaseWake(); }
+  save(); render();
+}
+function finalize(){
+  var r=state.running; if(!r) return;
+  var min=Math.round(elapsedMs()/60000);
+  state.running=null; releaseWake();
+  if(min<1){ lastResult=null; flash("1分未満のため記録しませんでした"); }
+  else{
+    var before=todayTotal();
+    var s={id:"s_"+Date.now(),date:dayKey(r.startTs),subject:r.subject,
+      goal:r.goal,startTs:r.startTs,endTs:Date.now(),min:min,src:"timer",done:null};
+    state.sessions.push(s);
+    lastResult={id:s.id,subject:s.subject,min:s.min,goal:s.goal,planMin:r.planMin};
+    /* 今日の日付ぶんが増えた時だけ数え上げる */
+    if(s.date===dayKey()) beginCountUp(before,todayTotal());
+  }
+  save(); render();
+}
+
+/* ============================================================
+   集計
+   ============================================================ */
+function totalOf(key){
+  return state.sessions.reduce(function(a,s){return a+(s.date===key?s.min:0);},0);
+}
+function slotMin(range){
+  var k=dayKey();
+  return state.sessions.reduce(function(a,s){
+    if(s.date!==k||!s.startTs) return a;
+    var h=new Date(s.startTs).getHours();
+    return a+((h>=range.from&&h<range.to)?s.min:0);
+  },0);
+}
+/* 確定済みの合計のみ。計測中のぶんは終了するまで加算しない
+   ── 途中で数字が増えないからこそ、終了時のカウントアップが効く */
+function todayTotal(){return totalOf(dayKey());}
+/* 今日を除いた「1日あたりの最高記録」。これを超えたら自己ベスト更新 */
+function bestOtherDay(){
+  var k=dayKey(),map={},m=0;
+  state.sessions.forEach(function(s){ if(s.date!==k) map[s.date]=(map[s.date]||0)+s.min; });
+  for(var d in map){ if(map[d]>m) m=map[d]; }
+  return m;
+}
+/* 月曜始まりの今週(今日を含む)の合計 */
+function weekTotal(){
+  var back=(baseDate().getDay()+6)%7,k=dayKey(),sum=0;
+  for(var i=0;i<=back;i++) sum+=totalOf(shiftKey(k,-i));
+  return sum;
+}
+/* 連続日数。今日がまだ0分なら昨日から数える(朝いちで0にならないように) */
+function streakDays(){
+  var k=dayKey(),n=0;
+  if(todayTotal()===0) k=shiftKey(k,-1);
+  while(totalOf(k)>0){n++;k=shiftKey(k,-1);}
+  return n;
+}
+/* 固定セッションまでの残り時間 */
+var AM_S=7*60+15,AM_E=8*60,PM_S=19*60+30,PM_E=20*60+15;
+function nextSlotText(){
+  var d=new Date(),m=d.getHours()*60+d.getMinutes();
+  function left(t){return (t-m)+"分";}
+  if(m<AM_S) return '朝まで あと <span class="mono">'+left(AM_S)+'</span>';
+  if(m<AM_E) return '朝の枠は <span class="mono">8:00</span> まで';
+  if(m<PM_S) return '夜まで あと <span class="mono">'+left(PM_S)+'</span>';
+  if(m<PM_E) return '夜の枠は <span class="mono">20:15</span> まで';
+  return "今日の枠は終了";
+}
+
+/* ============================================================
+   DOM
+   ============================================================ */
+function $(id){return document.getElementById(id);}
+var pendingMin=null, freeActive=false, viewKey=dayKey(), lastResult=null;
+var editId=null, delPending=null, delTimer=null, wipePending=false;
+var footMsg=null, footTimer=null;
+function flash(msg){footMsg=msg;clearTimeout(footTimer);
+  footTimer=setTimeout(function(){footMsg=null;renderPanel();},1500);renderPanel();}
+
+/* --- タブ --- */
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
+  t.addEventListener("click",function(){
+    var p=t.dataset.page;
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("active",x===t);});
+    Array.prototype.forEach.call(document.querySelectorAll(".page"),function(x){x.classList.toggle("visible",x.id==="page-"+p);});
+    window.scrollTo(0,0);
+    if(p==="rec"){viewKey=dayKey();renderRec();}
+  });
+});
+
+/* --- 科目セグメント --- */
+function renderSubj(){
+  var el=$("segSubj"); el.innerHTML="";
+  SUBJ.forEach(function(s){
+    var b=document.createElement("button");
+    b.className="seg"+(s===state.settings.lastSubject?" active":"");
+    b.textContent=s;
+    b.addEventListener("click",function(){state.settings.lastSubject=s;save();renderSubj();});
+    el.appendChild(b);
+  });
+}
+
+/* --- 時間セグメント(プリセットと自由入力は排他) --- */
+function renderMinSegs(){
+  var el=$("segMin"); el.innerHTML="";
+  PRESETS.forEach(function(v){
+    var b=document.createElement("button");
+    b.className="seg mono"+((!freeActive&&pendingMin===v)?" active":"");
+    b.textContent=v;
+    b.addEventListener("click",function(){
+      pendingMin=v; freeActive=false; $("freeMin").value="";
+      renderMinSegs();
+    });
+    el.appendChild(b);
+  });
+}
+$("freeMin").addEventListener("input",function(){
+  var v=parseInt(this.value,10);
+  if(this.value===""){freeActive=false;}
+  else{freeActive=true;pendingMin=(v>=1&&v<=600)?v:null;}
+  renderMinSegs();
+});
+
+/* --- 固定セッション行 --- */
+/* 時計は計測中も止めない。毎フレーム呼ぶので、変化した時だけ書き込む */
+function renderClock(){
+  var s=clockStr(Date.now());
+  if($("clockNow").textContent!==s) $("clockNow").textContent=s;
+}
+function renderSlots(){
+  renderClock();
+  var t=nextSlotText();
+  if($("nextLine").innerHTML!==t) $("nextLine").innerHTML=t;
+  [["am","stateAM"],["pm","statePM"]].forEach(function(p){
+    var done=slotMin(SLOTS[p[0]])>=45;
+    $(p[1]).className="slot-box"+(done?" done":"");
+    $(p[1]).setAttribute("aria-label",(p[0]==="am"?"朝":"夜")+"の枠 "+(done?"済":"未"));
+  });
+}
+["slotAM","slotPM"].forEach(function(id){
+  $(id).addEventListener("click",function(){
+    pendingMin=45; freeActive=false; $("freeMin").value=""; renderMinSegs();
+  });
+});
+
+/* --- 開始 --- */
+$("startBtn").addEventListener("click",function(){
+  var min=pendingMin;
+  if(!(min>=1&&min<=600)){min=state.settings.lastMin||45;}
+  /* 5分未満は「お試し」とみなし、次回の既定値にはしない */
+  if(min>=5) state.settings.lastMin=min;
+  lastResult=null;
+  startSession(min,state.settings.lastSubject,$("goalInput").value.trim());
+});
+$("pauseBtn").addEventListener("click",togglePause);
+$("stopBtn").addEventListener("click",function(){
+  finalize();
+  $("goalInput").value="";
+  /* 次回もすぐ始められるよう、前回の時間を選択状態に戻す */
+  pendingMin=state.settings.lastMin||45; freeActive=false; $("freeMin").value="";
+  renderMinSegs();
+});
+
+/* --- 直前セッションのストリップ(取り消し / できた・途中) --- */
+function renderStrip(){
+  var b=$("resultBox");
+  /* 直後は予定表より結果を見たいので、固定セッション表と入れ替える */
+  $("slotCard").hidden=!!lastResult;
+  if(!lastResult){b.hidden=true;return;}
+  b.hidden=false;
+  $("resultText").textContent=lastResult.subject+" "+fmtDur(lastResult.min)+" を記録しました";
+  $("goalRow").hidden=!lastResult.goal;
+  if(lastResult.goal) $("goalAsk").textContent="「"+lastResult.goal+"」は?";
+}
+function answerGoal(v){
+  if(!lastResult) return;
+  state.sessions.forEach(function(s){if(s.id===lastResult.id) s.done=v;});
+  lastResult=null; save(); render();
+}
+$("doneYes").addEventListener("click",function(){answerGoal(true);});
+$("doneNo").addEventListener("click",function(){answerGoal(false);});
+$("undoBtn").addEventListener("click",function(){
+  if(!lastResult) return;
+  state.sessions=state.sessions.filter(function(s){return s.id!==lastResult.id;});
+  /* 取り消したら、同じ条件ですぐ再開できるよう入力を戻す */
+  $("goalInput").value=lastResult.goal||"";
+  pendingMin=lastResult.planMin; freeActive=false; $("freeMin").value="";
+  lastResult=null; save(); render();
+});
+
+/* --- ローンチ画面 --------------------------------------------
+   初回は必ず、復帰時は30分以上離れていた時だけ。
+   計測中は出さない(カウントダウンを隠すのは論外なので) */
+var hiddenAt=0,launching=false;
+function runLaunch(){
+  var el=$("launch");
+  if(state.running){el.hidden=true;launching=false;return;}
+  if(launching) return;
+  launching=true;
+  el.hidden=false; el.classList.remove("out"); void el.offsetWidth;
+  setTimeout(function(){
+    el.classList.add("out");
+    setTimeout(function(){
+      el.hidden=true; el.classList.remove("out"); launching=false;
+    },LAUNCH_FADE_MS);
+  },LAUNCH_MS);
+}
+
+/* --- 予定超過の生存確認 --- */
+$("askKeep").addEventListener("click",function(){
+  var r=state.running; if(!r) return;
+  r.askAfterMs=elapsedMs()+ASK_AFTER_MS;   /* また60分後に聞く */
+  save(); render();
+});
+$("askStop").addEventListener("click",function(){ finalize(); });
+
+/* --- 止め忘れ復帰 --- */
+$("staleResume").addEventListener("click",function(){$("staleBox").hidden=true;});
+$("staleDrop").addEventListener("click",function(){state.running=null;save();$("staleBox").hidden=true;render();});
+function checkStale(){
+  var r=state.running; if(!r) return;
+  if(elapsedMs()>STALE_MS){
+    $("staleInfo").textContent="約"+Math.floor(elapsedMs()/3600000)+"時間前に開始 ・ "+r.subject;
+    $("staleBox").hidden=false;
+  }
+}
+
+/* --- 実行画面 --- */
+function renderRun(){
+  var r=state.running;
+  $("setupView").hidden=!!r;
+  $("runView").hidden=!r;
+  $("spacer").hidden=!!r;
+  if(!r) return;
+  $("runGoal").textContent=r.goal||"";
+  $("runGoal").style.display=r.goal?"block":"none";
+  $("runSubj").textContent=r.subject+" ・ "+r.planMin+"分";
+  /* 予定を大きく超えたら生存確認。寝落ちで何時間も記録されるのを防ぐ */
+  var ask=elapsedMs()>(r.askAfterMs||Infinity);
+  $("askBox").hidden=!ask;
+  if(ask) $("askTxt").textContent="予定より"+Math.floor((elapsedMs()-r.planMin*60000)/60000)+"分たっています";
+  var rem=remainMs(),over=rem<=0;
+  $("runBox").classList.toggle("over",over);
+  $("runNum").textContent=over?("+"+fmtMS(-rem)):fmtMS(rem);
+  $("runTag").textContent=isPaused()?"一時停止中":(over?"超過 ・ 続けたいだけ続けてOK":"");
+  $("pauseBtn").textContent=isPaused()?"再開":"一時停止";
+  if(over&&!r.beeped&&!isPaused()){r.beeped=true;beep();alertZero();save();}
+}
+
+/* --- 数え上げ演出 --------------------------------------------
+   セッション終了の瞬間が一番の報酬。数字とゲージを同じ時間・
+   同じ easing で伸ばし、節目を跨いだ瞬間だけパネルを反転させる。
+   ------------------------------------------------------------ */
+var anim=null,lastNumTxt="";
+function beginCountUp(from,to){
+  if(to<=from) return;
+  var d=Math.max(700,Math.min(1600,600+(to-from)*14));
+  var best=bestOtherDay();
+  anim={from:from,to:to,start:performance.now(),dur:d,
+        lines:[LINE_MIN,GOAL_MIN,best>0?best+1:0]
+          .filter(function(l){return l>0&&from<l&&to>=l;})
+          .sort(function(a,b){return a-b;})};
+  /* ゲージはCSSトランジションに任せ、時間を数字と揃える */
+  var g=$("gaugeFill");
+  g.style.transitionDuration=d+"ms";
+  setTimeout(function(){g.style.transitionDuration="";},d+60);
+}
+function flashPanel(){
+  var p=document.querySelector(".panel");
+  p.classList.add("flash");
+  setTimeout(function(){p.classList.remove("flash");},420);
+}
+function popNum(){
+  var n=$("panelNum");
+  n.classList.add("pop");
+  setTimeout(function(){n.classList.remove("pop");},130);
+}
+
+/* --- ダークパネル --- */
+function renderPanel(){
+  var r=state.running,t=todayTotal(),shown=t,target=t;
+  if(anim){
+    var p=Math.min(1,(performance.now()-anim.start)/anim.dur);
+    var e=1-Math.pow(1-p,4);                       /* easeOutQuart:一気に伸びて静かに着地 */
+    shown=Math.round(anim.from+(anim.to-anim.from)*e);
+    while(anim.lines.length&&shown>=anim.lines[0]){ anim.lines.shift(); flashPanel(); }
+    if(p>=1){ shown=anim.to; anim=null; popNum(); }
+  }
+  /* 計測中は「今日の積み上げ」だけに絞る。科目名と週の行は出さない */
+  $("panelLbl").textContent=r?"計測中":"TODAY";
+  $("panelWeek").hidden=!!r;
+  var n=$("panelNum"),txt=shown+'<span class="unit">分</span>';
+  if(txt!==lastNumTxt){ n.innerHTML=txt; lastNumTxt=txt; }
+  n.classList.toggle("lit",shown>0);
+  $("gaugeFill").style.width=Math.min(target/GOAL_MIN*100,100)+"%";
+  /* 週合計だけは桁が大きくなるので H:MM のまま */
+  $("weekTotal").textContent=fmtHM(weekTotal());
+  /* 1日あたりの自己ベスト。超えた日はその表示に切り替える */
+  var best=bestOtherDay(),bt=$("bestTxt");
+  bt.hidden=(best===0);
+  if(best>0){
+    var rec=t>best;
+    bt.textContent=rec?("自己ベスト更新 "+fmtDur(t)):("最高 "+fmtDur(best));
+    bt.className=rec?"risk":"";
+  }
+  /* 連続記録があるのに夜になっても0分の日だけ、静かに知らせる */
+  var risk=!r&&t===0&&streakDays()>=2&&new Date().getHours()>=19;
+  $("streakTxt").textContent="連続 "+streakDays()+"日"+(risk?" ・ 今日はまだ0分":"");
+  $("streakTxt").className=risk?"risk":"";
+  var f=$("panelFoot");
+  if(footMsg){f.textContent=footMsg;return;}
+  if(shown<LINE_MIN) f.textContent="90分ラインまで あと "+fmtDur(LINE_MIN-shown);
+  else if(shown<GOAL_MIN) f.textContent="90分クリア ・ 目標まで あと "+fmtDur(GOAL_MIN-shown);
+  else f.textContent="目標達成 ・ +"+fmtDur(shown-GOAL_MIN)+" 上積み中";
+}
+
+/* --- 記録ページ --- */
+function renderRec(){
+  $("recDate").textContent=keyToLabel(viewKey)+(viewKey===dayKey()?" ・ 今日":"");
+  $("nextDay").disabled=viewKey>=dayKey();
+  $("recTotal").textContent=fmtDur(totalOf(viewKey));
+  var list=state.sessions.filter(function(s){return s.date===viewKey;});
+  var el=$("sessList"); el.innerHTML="";
+  if(!list.length){el.innerHTML='<div class="empty">まだ記録がありません</div>';return;}
+  list.forEach(function(s){
+    var row=document.createElement("div"); row.className="srow";
+    var top=document.createElement("div"); top.className="srow-top";
+    var doneTxt=(s.done===true?" ・ できた":(s.done===false?" ・ 途中":""));
+    top.innerHTML='<span><span class="chip">'+s.subject+'</span><span class="srow-t">'+
+      (s.src==="timer"?clockStr(s.startTs)+"–"+clockStr(s.endTs):"手入力")+
+      (s.goal?" ・ "+s.goal:"")+doneTxt+'</span></span><span class="srow-m">'+fmtDur(s.min)+'</span>';
+    top.addEventListener("click",function(){editId=(editId===s.id)?null:s.id;delPending=null;renderRec();});
+    row.appendChild(top);
+    if(editId===s.id){
+      var ed=document.createElement("div"); ed.className="editbox";
+      var r1=document.createElement("div"); r1.className="r";
+      var sel=document.createElement("select");
+      SUBJ.forEach(function(x){var o=document.createElement("option");o.value=x;o.textContent=x;
+        if(x===s.subject)o.selected=true;sel.appendChild(o);});
+      var inp=document.createElement("input");
+      inp.type="number"; inp.className="mono"; inp.value=s.min; inp.min=1; inp.max=600;
+      inp.style.width="90px"; inp.style.height="44px";
+      r1.appendChild(sel); r1.appendChild(inp);
+      var r2=document.createElement("div"); r2.className="r";
+      var sv=document.createElement("button"); sv.className="btn btn-sm"; sv.style.flex="2"; sv.textContent="保存";
+      sv.addEventListener("click",function(){
+        s.subject=sel.value; var v=parseInt(inp.value,10);
+        if(v>=1&&v<=600) s.min=v;
+        editId=null; save(); render();
+      });
+      var dl=document.createElement("button"); dl.className="btn btn-sm btn-ghost"; dl.style.flex="1";
+      dl.textContent=(delPending===s.id)?"もう一度タップで削除":"削除";
+      dl.addEventListener("click",function(){
+        if(delPending===s.id){
+          state.sessions=state.sessions.filter(function(x){return x.id!==s.id;});
+          delPending=null; editId=null; save(); render();
+        }else{
+          delPending=s.id; clearTimeout(delTimer);
+          delTimer=setTimeout(function(){delPending=null;renderRec();},1500);
+          renderRec();
+        }
+      });
+      r2.appendChild(sv); r2.appendChild(dl);
+      ed.appendChild(r1); ed.appendChild(r2); row.appendChild(ed);
+    }
+    el.appendChild(row);
+  });
+}
+$("prevDay").addEventListener("click",function(){viewKey=shiftKey(viewKey,-1);editId=null;renderRec();});
+$("nextDay").addEventListener("click",function(){if(viewKey<dayKey()){viewKey=shiftKey(viewKey,1);editId=null;renderRec();}});
+
+/* --- 手入力 --- */
+function renderMForm(){
+  var sel=$("mSubj");
+  if(!sel.options.length){SUBJ.forEach(function(x){var o=document.createElement("option");
+    o.value=x;o.textContent=x;sel.appendChild(o);});}
+  var el=$("mSegs"); el.innerHTML="";
+  [15,30,45,60,90,120].forEach(function(v){
+    var b=document.createElement("button");
+    b.className="seg mono"+((+$("mMin").value===v)?" active":"");
+    b.textContent=v;
+    b.addEventListener("click",function(){$("mMin").value=v;renderMForm();});
+    el.appendChild(b);
+  });
+}
+$("addBtn").addEventListener("click",function(){
+  $("addForm").hidden=!$("addForm").hidden;
+  if(!$("addForm").hidden){$("mSubj").value=state.settings.lastSubject;renderMForm();}
+});
+$("mMin").addEventListener("input",renderMForm);
+$("mSave").addEventListener("click",function(){
+  var v=parseInt($("mMin").value,10); if(!(v>=1&&v<=600)) return;
+  state.sessions.push({id:"s_"+Date.now(),date:viewKey,subject:$("mSubj").value,
+    goal:"",startTs:null,endTs:null,min:v,src:"manual"});
+  $("addForm").hidden=true; save(); render();
+});
+
+/* --- 全削除 --- */
+$("wipeBtn").addEventListener("click",function(){
+  var b=$("wipeBtn");
+  if(wipePending){state=defaults();store.remove(KEY);wipePending=false;b.textContent="全データを削除";render();}
+  else{wipePending=true;b.textContent="もう一度タップで削除";
+    setTimeout(function(){wipePending=false;b.textContent="全データを削除";},1500);}
+});
+
+/* ============================================================
+   描画ループ
+   ============================================================ */
+function render(){renderStrip();renderSubj();renderMinSegs();renderSlots();renderRun();renderPanel();renderRec();renderMForm();}
+function tick(){
+  renderClock();
+  if(state.running){renderRun();renderPanel();}
+  else{renderSlots(); if(anim) renderPanel();}
+  requestAnimationFrame(tick);
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){ hiddenAt=Date.now(); return; }
+  /* 裏に回るとOSが解放するので取り直す */
+  if(state.running&&!isPaused()) requestWake();
+  if(hiddenAt&&Date.now()-hiddenAt>=RESHOW_AFTER_MS) runLaunch();
+  renderClock();renderRun();renderPanel();
+});
+pendingMin=state.settings.lastMin||45;
+runLaunch();
+checkStale();
+render();
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
