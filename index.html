@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="studyLog">
@@ -33,9 +33,12 @@ body{
   font-size:14px; line-height:1.7;
   -webkit-font-smoothing:antialiased;
   -webkit-text-size-adjust:100%;
+  /* ダブルタップ拡大を殺す。タップ後の300ms待ちも消える */
+  touch-action:manipulation;
 }
 button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer;}
-input,select{font-family:inherit;font-size:inherit;color:var(--text);}
+/* 16px未満だとiOSがフォーカス時に自動ズームするので、入力欄だけ16pxにする */
+input,select{font-family:inherit;font-size:16px;color:var(--text);}
 .mono{font-family:var(--mono);}
 
 /* ============================================================
@@ -117,12 +120,6 @@ select{
 /* ============================================================
    時刻・固定セッション表
    ============================================================ */
-input[type=text].goalinput{
-  flex:none;width:100%;height:42px;padding:0 2px;margin-bottom:11px;
-  border:none;border-bottom:1px solid var(--border);border-radius:0;
-  background:transparent;outline:none;transition:border-color .15s;
-}
-input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:var(--text);}
 .slot{
   display:flex;align-items:center;gap:10px;
   padding:8px 0;border-bottom:1px solid var(--border);
@@ -157,11 +154,11 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
 }
 /* 0到達後は面ごとダークに反転させ、戻るまで「終わっている」と分かる状態にする */
 .runbox.over{background:var(--dark);border-color:var(--dark);}
-.runbox.over .run-goal,.runbox.over .run-num{color:var(--dark-text);}
+.runbox.over .run-num{color:var(--dark-text);}
 .runbox.over .run-sub,.runbox.over .run-tag{color:var(--text-ph);}
 /* 0到達の瞬間だけ、白に振り戻して点滅させる */
 .runbox.over.pulse{background:var(--bg);border-color:var(--text);}
-.runbox.over.pulse .run-goal,.runbox.over.pulse .run-num{color:var(--text);}
+.runbox.over.pulse .run-num{color:var(--text);}
 .runbox.over.pulse .run-sub,.runbox.over.pulse .run-tag{color:var(--text-2);}
 /* 積み上げリング。経過ぶんが埋まっていく(残り時間はカウントダウンが担当) */
 .run-ring{display:block;margin:0 auto 10px;}
@@ -171,8 +168,7 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
 .runbox.over .run-ring .prg{stroke:var(--dark-text);}
 .runbox.over.pulse .run-ring .trk{stroke:var(--border);}
 .runbox.over.pulse .run-ring .prg{stroke:var(--text);}
-.run-goal,.run-num{transition:color .12s;}
-.run-goal{font-size:14px;margin-bottom:4px;word-break:break-word;}
+.run-num{transition:color .12s;}
 .run-sub{font-size:12px;color:var(--text-2);transition:color .12s;}
 .run-num{font-family:var(--mono);font-size:52px;line-height:1.1;margin:10px 0 4px;letter-spacing:-.02em;}
 /* 実行中は残りの高さを使い切って縦中央に置く */
@@ -277,13 +273,6 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
         <span class="strip-txt" id="resultText"></span>
         <button class="linkbtn" id="undoBtn">取り消し</button>
       </div>
-      <div class="strip-row" id="goalRow" hidden>
-        <span class="strip-txt" id="goalAsk"></span>
-        <span style="display:flex;gap:6px;margin-left:auto;flex:none;">
-          <button class="seg seg-xs" id="doneYes">できた</button>
-          <button class="seg seg-xs" id="doneNo">途中</button>
-        </span>
-      </div>
     </div>
 
     <div class="card">
@@ -297,10 +286,7 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
                class="mono" style="width:78px;height:34px;border-radius:var(--r-pill);
                padding:0 12px;text-align:center;">
       </div>
-      <div class="card-h2">やること(任意)</div>
-      <input type="text" id="goalInput" class="goalinput" maxlength="60" autocomplete="off"
-             placeholder="例:数学のワーク p.42〜45">
-      <button class="btn" id="startBtn" style="width:100%;">計測を開始</button>
+      <button class="btn" id="startBtn" style="width:100%;margin-top:14px;">計測を開始</button>
     </div>
 
     <div class="card" id="slotCard" style="margin-bottom:0;">
@@ -326,7 +312,6 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
         <circle class="prg" id="ringPrg" cx="20" cy="20" r="18.5" fill="none" stroke-width="3"
                 stroke-dasharray="116.24" stroke-dashoffset="116.24" transform="rotate(-90 20 20)"/>
       </svg>
-      <div class="run-goal" id="runGoal"></div>
       <div class="run-sub" id="runSubj"></div>
       <div class="run-num mono" id="runNum">00:00</div>
       <div class="run-tag" id="runTag"></div>
@@ -534,10 +519,10 @@ function beep(){
   }catch(e){}
 }
 
-function startSession(min,subject,goal){
+function startSession(min,subject){
   primeAudio(); requestWake();
   var now=Date.now();
-  state.running={subject:subject,goal:goal||"",planMin:min,startTs:now,
+  state.running={subject:subject,planMin:min,startTs:now,
     endTs:now+min*60000,pausedTotalMs:0,pauseStartTs:null,beeped:false,
     askAfterMs:min*60000+ASK_AFTER_MS};
   save(); render();
@@ -556,9 +541,9 @@ function finalize(){
   else{
     var before=todayTotal();
     var s={id:"s_"+Date.now(),date:dayKey(r.startTs),subject:r.subject,
-      goal:r.goal,startTs:r.startTs,endTs:Date.now(),min:min,src:"timer",done:null};
+      startTs:r.startTs,endTs:Date.now(),min:min,src:"timer"};
     state.sessions.push(s);
-    lastResult={id:s.id,subject:s.subject,min:s.min,goal:s.goal,planMin:r.planMin};
+    lastResult={id:s.id,subject:s.subject,min:s.min,planMin:r.planMin};
     /* 今日の日付ぶんが増えた時だけ数え上げる */
     if(s.date===dayKey()) beginCountUp(before,todayTotal());
   }
@@ -678,18 +663,17 @@ $("startBtn").addEventListener("click",function(){
   /* 5分未満は「お試し」とみなし、次回の既定値にはしない */
   if(min>=5) state.settings.lastMin=min;
   lastResult=null;
-  startSession(min,state.settings.lastSubject,$("goalInput").value.trim());
+  startSession(min,state.settings.lastSubject);
 });
 $("pauseBtn").addEventListener("click",togglePause);
 $("stopBtn").addEventListener("click",function(){
   finalize();
-  $("goalInput").value="";
   /* 次回もすぐ始められるよう、前回の時間を選択状態に戻す */
   pendingMin=state.settings.lastMin||45; freeActive=false; $("freeMin").value="";
   renderMinSegs();
 });
 
-/* --- 直前セッションのストリップ(取り消し / できた・途中) --- */
+/* --- 直前セッションのストリップ(取り消し) --- */
 function renderStrip(){
   var b=$("resultBox");
   /* 直後は予定表より結果を見たいので、固定セッション表と入れ替える */
@@ -697,21 +681,11 @@ function renderStrip(){
   if(!lastResult){b.hidden=true;return;}
   b.hidden=false;
   $("resultText").textContent=lastResult.subject+" "+fmtDur(lastResult.min)+" を記録しました";
-  $("goalRow").hidden=!lastResult.goal;
-  if(lastResult.goal) $("goalAsk").textContent="「"+lastResult.goal+"」は?";
 }
-function answerGoal(v){
-  if(!lastResult) return;
-  state.sessions.forEach(function(s){if(s.id===lastResult.id) s.done=v;});
-  lastResult=null; save(); render();
-}
-$("doneYes").addEventListener("click",function(){answerGoal(true);});
-$("doneNo").addEventListener("click",function(){answerGoal(false);});
 $("undoBtn").addEventListener("click",function(){
   if(!lastResult) return;
   state.sessions=state.sessions.filter(function(s){return s.id!==lastResult.id;});
-  /* 取り消したら、同じ条件ですぐ再開できるよう入力を戻す */
-  $("goalInput").value=lastResult.goal||"";
+  /* 取り消したら、同じ条件ですぐ再開できるよう時間を戻す */
   pendingMin=lastResult.planMin; freeActive=false; $("freeMin").value="";
   lastResult=null; save(); render();
 });
@@ -760,8 +734,6 @@ function renderRun(){
   $("runView").hidden=!r;
   $("spacer").hidden=!!r;
   if(!r) return;
-  $("runGoal").textContent=r.goal||"";
-  $("runGoal").style.display=r.goal?"block":"none";
   $("runSubj").textContent=r.subject+" ・ "+r.planMin+"分";
   /* 経過ぶんを埋める。予定に達したら満ちたまま */
   var prog=Math.min(1,elapsedMs()/(r.planMin*60000));
@@ -856,10 +828,9 @@ function renderRec(){
   list.forEach(function(s){
     var row=document.createElement("div"); row.className="srow";
     var top=document.createElement("div"); top.className="srow-top";
-    var doneTxt=(s.done===true?" ・ できた":(s.done===false?" ・ 途中":""));
     top.innerHTML='<span><span class="chip">'+s.subject+'</span><span class="srow-t">'+
       (s.src==="timer"?clockStr(s.startTs)+"–"+clockStr(s.endTs):"手入力")+
-      (s.goal?" ・ "+s.goal:"")+doneTxt+'</span></span><span class="srow-m">'+fmtDur(s.min)+'</span>';
+      '</span></span><span class="srow-m">'+fmtDur(s.min)+'</span>';
     top.addEventListener("click",function(){editId=(editId===s.id)?null:s.id;delPending=null;renderRec();});
     row.appendChild(top);
     if(editId===s.id){
@@ -922,7 +893,7 @@ $("mMin").addEventListener("input",renderMForm);
 $("mSave").addEventListener("click",function(){
   var v=parseInt($("mMin").value,10); if(!(v>=1&&v<=600)) return;
   state.sessions.push({id:"s_"+Date.now(),date:viewKey,subject:$("mSubj").value,
-    goal:"",startTs:null,endTs:null,min:v,src:"manual"});
+    startTs:null,endTs:null,min:v,src:"manual"});
   $("addForm").hidden=true; save(); render();
 });
 
@@ -950,6 +921,12 @@ document.addEventListener("visibilitychange",function(){
   if(hiddenAt&&Date.now()-hiddenAt>=RESHOW_AFTER_MS) runLaunch();
   renderRun();renderPanel();
 });
+/* ピンチ拡大の抑止。Safariはメタタグのuser-scalable=noを無視することがあるので
+   ジェスチャ自体を止める */
+["gesturestart","gesturechange","gestureend"].forEach(function(ev){
+  document.addEventListener(ev,function(e){e.preventDefault();},{passive:false});
+});
+
 pendingMin=state.settings.lastMin||45;
 runLaunch();
 checkStale();
