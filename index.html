@@ -163,6 +163,14 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
 .runbox.over.pulse{background:var(--bg);border-color:var(--text);}
 .runbox.over.pulse .run-goal,.runbox.over.pulse .run-num{color:var(--text);}
 .runbox.over.pulse .run-sub,.runbox.over.pulse .run-tag{color:var(--text-2);}
+/* 積み上げリング。経過ぶんが埋まっていく(残り時間はカウントダウンが担当) */
+.run-ring{display:block;margin:0 auto 10px;}
+.run-ring .trk{stroke:var(--border);transition:stroke .12s;}
+.run-ring .prg{stroke:var(--text);transition:stroke .12s;}
+.runbox.over .run-ring .trk{stroke:#3a3a3a;}
+.runbox.over .run-ring .prg{stroke:var(--dark-text);}
+.runbox.over.pulse .run-ring .trk{stroke:var(--border);}
+.runbox.over.pulse .run-ring .prg{stroke:var(--text);}
 .run-goal,.run-num{transition:color .12s;}
 .run-goal{font-size:14px;margin-bottom:4px;word-break:break-word;}
 .run-sub{font-size:12px;color:var(--text-2);transition:color .12s;}
@@ -313,6 +321,11 @@ input[type=text].goalinput:focus{border-color:transparent;border-bottom-color:va
   <!-- 実行画面 -->
   <div id="runView" hidden>
     <div class="runbox" id="runBox">
+      <svg class="run-ring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+        <circle class="trk" cx="20" cy="20" r="18.5" fill="none" stroke-width="3"/>
+        <circle class="prg" id="ringPrg" cx="20" cy="20" r="18.5" fill="none" stroke-width="3"
+                stroke-dasharray="116.24" stroke-dashoffset="116.24" transform="rotate(-90 20 20)"/>
+      </svg>
       <div class="run-goal" id="runGoal"></div>
       <div class="run-sub" id="runSubj"></div>
       <div class="run-num mono" id="runNum">00:00</div>
@@ -409,6 +422,7 @@ var GOAL_MIN=180, LINE_MIN=90;
 var STALE_MS=8*3600*1000;
 var ASK_AFTER_MS=60*60*1000;   /* 予定を60分超えたら生存確認する */
 var LAUNCH_MS=900,LAUNCH_FADE_MS=340;
+var RING_LEN=2*Math.PI*18.5;   /* 積み上げリングの円周 */
 var RESHOW_AFTER_MS=30*60*1000; /* これ以上離れて戻った時だけ再表示 */
 var SLOTS={am:{from:5,to:11},pm:{from:17,to:23}};
 
@@ -749,6 +763,9 @@ function renderRun(){
   $("runGoal").textContent=r.goal||"";
   $("runGoal").style.display=r.goal?"block":"none";
   $("runSubj").textContent=r.subject+" ・ "+r.planMin+"分";
+  /* 経過ぶんを埋める。予定に達したら満ちたまま */
+  var prog=Math.min(1,elapsedMs()/(r.planMin*60000));
+  $("ringPrg").setAttribute("stroke-dashoffset",(RING_LEN*(1-prog)).toFixed(1));
   /* 予定を大きく超えたら生存確認。寝落ちで何時間も記録されるのを防ぐ */
   var ask=elapsedMs()>(r.askAfterMs||Infinity);
   $("askBox").hidden=!ask;
