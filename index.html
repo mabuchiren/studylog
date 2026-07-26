@@ -181,13 +181,16 @@ select{
    ============================================================ */
 .panel{
   flex:none;background:var(--dark);border-radius:var(--r-lg);padding:16px;margin-top:8px;
-  transition:background .18s;
+  transform-origin:center bottom;
+  transition:background .18s,transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;
 }
+/* 記録確定の瞬間、パネル全体がひと呼吸ふくらむ */
+.panel.done{transform:scale(1.025);}
 .panel-h{display:flex;justify-content:space-between;align-items:center;}
 .panel-lbl{font-size:11px;color:var(--text-ph);letter-spacing:.06em;}
 .panel-num{font-family:var(--mono);font-size:32px;color:var(--text-ph);margin:6px 0 4px;line-height:1.1;
-  transform-origin:left center;transition:color .15s,transform .12s cubic-bezier(.25,1,.5,1);}
-.panel-num.pop{transform:scale(1.07);}
+  transform-origin:left center;transition:color .15s,transform .22s cubic-bezier(.34,1.56,.64,1);}
+.panel-num.pop{transform:scale(1.13);}
 .panel-num .unit{font-family:inherit;font-size:inherit;margin-left:2px;}
 .panel-num.lit{color:var(--accent);}
 .panel-sub{font-size:11px;color:var(--text-ph);}
@@ -198,8 +201,8 @@ select{
 .gauge-tick{position:absolute;left:50%;top:-2px;width:2px;height:10px;background:var(--dark-text);opacity:.6;
   transition:background .18s;}
 
-/* 節目(90分・180分)を跨いだ瞬間だけ、パネルを反転させる */
-.panel.flash{background:var(--accent);}
+/* 節目(90分・180分・自己ベスト)を跨いだ瞬間だけ、パネルを反転させる */
+.panel.flash{background:var(--accent);box-shadow:0 0 0 2px var(--accent),0 0 22px 2px var(--accent);}
 .panel.flash .panel-lbl,
 .panel.flash .panel-foot,
 .panel.flash .panel-week,
@@ -771,12 +774,13 @@ function beginCountUp(from,to){
 function flashPanel(){
   var p=document.querySelector(".panel");
   p.classList.add("flash");
-  setTimeout(function(){p.classList.remove("flash");},420);
+  setTimeout(function(){p.classList.remove("flash");},560);
 }
 function popNum(){
-  var n=$("panelNum");
-  n.classList.add("pop");
-  setTimeout(function(){n.classList.remove("pop");},130);
+  var n=$("panelNum"),p=document.querySelector(".panel");
+  n.classList.add("pop"); p.classList.add("done");
+  setTimeout(function(){n.classList.remove("pop");},220);
+  setTimeout(function(){p.classList.remove("done");},300);
 }
 
 /* --- ダークパネル --- */
