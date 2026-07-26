@@ -232,6 +232,7 @@ select{
 
 <div class="tabbar">
   <button class="tab active" data-page="home">ホーム</button>
+  <button class="tab" data-page="timer">タイマー</button>
   <button class="tab" data-page="rec">記録</button>
   <button class="tab" data-page="set">設定</button>
 </div>
@@ -320,6 +321,22 @@ select{
   </div>
 </section>
 
+<!-- ===== タイマー(休憩用) ===== -->
+<section class="page" id="page-timer">
+  <div class="card">
+    <div class="card-h">時間</div>
+    <div class="segments">
+      <span id="tSegMin" style="display:contents;"></span>
+      <input type="number" id="tFreeMin" inputmode="numeric" autocomplete="off"
+             spellcheck="false" min="1" max="600" placeholder="分"
+             class="mono" style="width:78px;height:34px;border-radius:var(--r-pill);
+             padding:0 12px;text-align:center;">
+    </div>
+    <button class="btn" id="tStartBtn" style="width:100%;margin-top:14px;">計測を開始</button>
+  </div>
+  <div class="spacer"></div>
+</section>
+
 <!-- ===== 記録 ===== -->
 <section class="page" id="page-rec">
   <div class="datenav">
@@ -360,7 +377,7 @@ select{
     <button class="btn btn-sm btn-ghost" id="wipeBtn" style="width:100%;">全データを削除</button>
   </div>
   <div class="spacer"></div>
-  <div class="foot">studyLog v1.1</div>
+  <div class="foot">studyLog v1.2</div>
 </section>
 
 </div>
@@ -375,6 +392,7 @@ select{
 var KEY="studyLog_v1";
 var SUBJ=["英語","数学","理科","社会","国語","塾・宿題"];
 var PRESETS=[15,25,45,60];
+var TIMER_PRESETS=[5,10,15,20];   /* 休憩タイマーの選択肢 */
 var GOAL_MIN=180, LINE_MIN=90;
 var STALE_MS=8*3600*1000;
 var ASK_AFTER_MS=60*60*1000;   /* 予定を60分超えたら生存確認する */
@@ -498,6 +516,15 @@ function startSession(min,subject){
     askAfterMs:min*60000+ASK_AFTER_MS};
   save(); render();
 }
+/* 休憩タイマー。勉強としては記録しない。UIは計測画面をそのまま共有する */
+function startBreak(min){
+  primeAudio(); requestWake();
+  var now=Date.now();
+  state.running={mode:"break",planMin:min,startTs:now,
+    endTs:now+min*60000,pausedTotalMs:0,pauseStartTs:null,beeped:false,
+    askAfterMs:min*60000+ASK_AFTER_MS};
+  save(); activateTab("home"); render();
+}
 function togglePause(){
   var r=state.running; if(!r) return;
   if(r.pauseStartTs){ r.pausedTotalMs+=Date.now()-r.pauseStartTs; r.pauseStartTs=null; requestWake(); }
@@ -506,6 +533,11 @@ function togglePause(){
 }
 function finalize(){
   var r=state.running; if(!r) return;
+  /* 休憩は勉強として記録しない。終わったらタイマータブへ戻す */
+  if(r.mode==="break"){
+    state.running=null; releaseWake(); lastResult=null;
+    save(); activateTab("timer"); render(); return;
+  }
   var min=Math.round(elapsedMs()/60000);
   state.running=null; releaseWake();
   if(min<1){ lastResult=null; flash("1分未満のため記録しませんでした"); }
@@ -556,20 +588,21 @@ function streakDays(){
    ============================================================ */
 function $(id){return document.getElementById(id);}
 var pendingMin=null, freeActive=false, viewKey=dayKey(), lastResult=null;
+var tPendingMin=null, tFreeActive=false;   /* 休憩タイマー用 */
 var editId=null, delPending=null, delTimer=null, wipePending=false;
 var footMsg=null, footTimer=null;
 function flash(msg){footMsg=msg;clearTimeout(footTimer);
   footTimer=setTimeout(function(){footMsg=null;renderPanel();},1500);renderPanel();}
 
 /* --- タブ --- */
+function activateTab(p){
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("active",x.dataset.page===p);});
+  Array.prototype.forEach.call(document.querySelectorAll(".page"),function(x){x.classList.toggle("visible",x.id==="page-"+p);});
+  window.scrollTo(0,0);
+  if(p==="rec"){viewKey=dayKey();renderRec();}
+}
 Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
-  t.addEventListener("click",function(){
-    var p=t.dataset.page;
-    Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("active",x===t);});
-    Array.prototype.forEach.call(document.querySelectorAll(".page"),function(x){x.classList.toggle("visible",x.id==="page-"+p);});
-    window.scrollTo(0,0);
-    if(p==="rec"){viewKey=dayKey();renderRec();}
-  });
+  t.addEventListener("click",function(){activateTab(t.dataset.page);});
 });
 
 /* --- 科目セグメント --- */
@@ -622,6 +655,33 @@ $("stopBtn").addEventListener("click",function(){
   renderMinSegs();
 });
 
+/* --- 休憩タイマー(時間だけ・科目なし) --- */
+function renderTimerSegs(){
+  var el=$("tSegMin"); el.innerHTML="";
+  TIMER_PRESETS.forEach(function(v){
+    var b=document.createElement("button");
+    b.className="seg mono"+((!tFreeActive&&tPendingMin===v)?" active":"");
+    b.textContent=v;
+    b.addEventListener("click",function(){
+      tPendingMin=v; tFreeActive=false; $("tFreeMin").value="";
+      renderTimerSegs();
+    });
+    el.appendChild(b);
+  });
+}
+$("tFreeMin").addEventListener("input",function(){
+  var v=parseInt(this.value,10);
+  if(this.value===""){tFreeActive=false;}
+  else{tFreeActive=true;tPendingMin=(v>=1&&v<=600)?v:null;}
+  renderTimerSegs();
+});
+$("tStartBtn").addEventListener("click",function(){
+  var min=tPendingMin;
+  if(!(min>=1&&min<=600)){min=5;}   /* 未選択なら5分 */
+  lastResult=null;
+  startBreak(min);
+});
+
 /* --- 直前セッションのストリップ(取り消し) --- */
 function renderStrip(){
   var b=$("resultBox");
@@ -669,7 +729,7 @@ $("staleDrop").addEventListener("click",function(){state.running=null;save();$("
 function checkStale(){
   var r=state.running; if(!r) return;
   if(elapsedMs()>STALE_MS){
-    $("staleInfo").textContent="約"+Math.floor(elapsedMs()/3600000)+"時間前に開始 ・ "+r.subject;
+    $("staleInfo").textContent="約"+Math.floor(elapsedMs()/3600000)+"時間前に開始 ・ "+(r.mode==="break"?"休憩":r.subject);
     $("staleBox").hidden=false;
   }
 }
@@ -681,7 +741,9 @@ function renderRun(){
   $("runView").hidden=!r;
   $("spacer").hidden=!!r;
   if(!r) return;
-  $("runSubj").textContent=r.subject+" ・ "+r.planMin+"分";
+  var brk=r.mode==="break";
+  $("runSubj").textContent=(brk?"休憩":r.subject)+" ・ "+r.planMin+"分";
+  $("stopBtn").textContent=brk?"終了":"終了して記録";
   /* 経過ぶんを埋める。予定に達したら満ちたまま */
   var prog=Math.min(1,elapsedMs()/(r.planMin*60000));
   $("ringPrg").setAttribute("stroke-dashoffset",(RING_LEN*(1-prog)).toFixed(1));
@@ -738,7 +800,7 @@ function renderPanel(){
     if(p>=1){ shown=anim.to; anim=null; popNum(); }
   }
   /* 計測中は「今日の積み上げ」だけに絞る。科目名と週の行は出さない */
-  $("panelLbl").textContent=r?"計測中":"TODAY";
+  $("panelLbl").textContent=r?(r.mode==="break"?"休憩中":"計測中"):"TODAY";
   $("panelWeek").hidden=!!r;
   var n=$("panelNum"),txt=shown+'<span class="unit">分</span>';
   if(txt!==lastNumTxt){ n.innerHTML=txt; lastNumTxt=txt; }
@@ -856,7 +918,7 @@ $("wipeBtn").addEventListener("click",function(){
 /* ============================================================
    描画ループ
    ============================================================ */
-function render(){renderStrip();renderSubj();renderMinSegs();renderRun();renderPanel();renderRec();renderMForm();}
+function render(){renderStrip();renderSubj();renderMinSegs();renderTimerSegs();renderRun();renderPanel();renderRec();renderMForm();}
 function tick(){
   if(state.running){renderRun();renderPanel();}
   else if(anim){renderPanel();}
@@ -876,6 +938,7 @@ document.addEventListener("visibilitychange",function(){
 });
 
 pendingMin=state.settings.lastMin||45;
+tPendingMin=10;   /* 休憩の既定は10分 */
 runLaunch();
 checkStale();
 render();
