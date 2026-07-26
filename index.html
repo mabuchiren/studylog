@@ -117,24 +117,6 @@ select{
 }
 .spacer{flex:1;min-height:16px;}
 
-/* ============================================================
-   時刻・固定セッション表
-   ============================================================ */
-.slot{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 0;border-bottom:1px solid var(--border);
-}
-.slot:last-child{border-bottom:none;}
-.slot-name{font-size:13px;width:2.2em;}
-.slot-len{font-size:12px;color:var(--text-2);}
-/* 済=黒く塗る / 未=白のまま。分数は出さない */
-.slot-box{
-  margin-left:auto;width:18px;height:18px;border-radius:0;
-  border:1px solid var(--border);background:var(--bg);
-  transition:background .15s,border-color .15s;
-}
-.slot-box.done{background:var(--btn);border-color:var(--btn);}
-
 /* --- セッション終了後のストリップ --- */
 .strip{flex:none;border:1px solid var(--text);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:10px;}
 .strip-row{display:flex;align-items:center;gap:8px;font-size:13px;}
@@ -292,19 +274,6 @@ select{
       <button class="btn" id="startBtn" style="width:100%;margin-top:14px;">計測を開始</button>
     </div>
 
-    <div class="card" id="slotCard" style="margin-bottom:0;">
-      <div class="card-h">今日の固定セッション</div>
-      <div class="slot" id="slotAM">
-        <span class="slot-name">朝</span>
-        <span class="slot-len">45分</span>
-        <span class="slot-box" id="stateAM"></span>
-      </div>
-      <div class="slot" id="slotPM">
-        <span class="slot-name">夜</span>
-        <span class="slot-len">45分</span>
-        <span class="slot-box" id="statePM"></span>
-      </div>
-    </div>
   </div>
 
   <!-- 実行画面 -->
@@ -391,7 +360,7 @@ select{
     <button class="btn btn-sm btn-ghost" id="wipeBtn" style="width:100%;">全データを削除</button>
   </div>
   <div class="spacer"></div>
-  <div class="foot">studyLog v1.0</div>
+  <div class="foot">studyLog v1.1</div>
 </section>
 
 </div>
@@ -412,7 +381,6 @@ var ASK_AFTER_MS=60*60*1000;   /* 予定を60分超えたら生存確認する *
 var LAUNCH_MS=900,LAUNCH_FADE_MS=340;
 var RING_LEN=2*Math.PI*18.5;   /* 積み上げリングの円周 */
 var RESHOW_AFTER_MS=30*60*1000; /* これ以上離れて戻った時だけ再表示 */
-var SLOTS={am:{from:5,to:11},pm:{from:17,to:23}};
 
 /* ============================================================
    ストレージ(安全ラッパー)
@@ -559,14 +527,6 @@ function finalize(){
 function totalOf(key){
   return state.sessions.reduce(function(a,s){return a+(s.date===key?s.min:0);},0);
 }
-function slotMin(range){
-  var k=dayKey();
-  return state.sessions.reduce(function(a,s){
-    if(s.date!==k||!s.startTs) return a;
-    var h=new Date(s.startTs).getHours();
-    return a+((h>=range.from&&h<range.to)?s.min:0);
-  },0);
-}
 /* 確定済みの合計のみ。計測中のぶんは終了するまで加算しない
    ── 途中で数字が増えないからこそ、終了時のカウントアップが効く */
 function todayTotal(){return totalOf(dayKey());}
@@ -645,20 +605,6 @@ $("freeMin").addEventListener("input",function(){
   renderMinSegs();
 });
 
-/* --- 固定セッション行 --- */
-function renderSlots(){
-  [["am","stateAM"],["pm","statePM"]].forEach(function(p){
-    var done=slotMin(SLOTS[p[0]])>=45;
-    $(p[1]).className="slot-box"+(done?" done":"");
-    $(p[1]).setAttribute("aria-label",(p[0]==="am"?"朝":"夜")+"の枠 "+(done?"済":"未"));
-  });
-}
-["slotAM","slotPM"].forEach(function(id){
-  $(id).addEventListener("click",function(){
-    pendingMin=45; freeActive=false; $("freeMin").value=""; renderMinSegs();
-  });
-});
-
 /* --- 開始 --- */
 $("startBtn").addEventListener("click",function(){
   var min=pendingMin;
@@ -679,8 +625,6 @@ $("stopBtn").addEventListener("click",function(){
 /* --- 直前セッションのストリップ(取り消し) --- */
 function renderStrip(){
   var b=$("resultBox");
-  /* 直後は予定表より結果を見たいので、固定セッション表と入れ替える */
-  $("slotCard").hidden=!!lastResult;
   if(!lastResult){b.hidden=true;return;}
   b.hidden=false;
   $("resultText").textContent=lastResult.subject+" "+fmtDur(lastResult.min)+" を記録しました";
@@ -912,10 +856,10 @@ $("wipeBtn").addEventListener("click",function(){
 /* ============================================================
    描画ループ
    ============================================================ */
-function render(){renderStrip();renderSubj();renderMinSegs();renderSlots();renderRun();renderPanel();renderRec();renderMForm();}
+function render(){renderStrip();renderSubj();renderMinSegs();renderRun();renderPanel();renderRec();renderMForm();}
 function tick(){
   if(state.running){renderRun();renderPanel();}
-  else{renderSlots(); if(anim) renderPanel();}
+  else if(anim){renderPanel();}
   requestAnimationFrame(tick);
 }
 document.addEventListener("visibilitychange",function(){
