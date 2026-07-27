@@ -377,7 +377,7 @@ select{
     <button class="btn btn-sm btn-ghost" id="wipeBtn" style="width:100%;">全データを削除</button>
   </div>
   <div class="spacer"></div>
-  <div class="foot">studyLog v1.2</div>
+  <div class="foot">studyLog v1.3</div>
 </section>
 
 </div>
@@ -599,6 +599,10 @@ function activateTab(p){
   Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("active",x.dataset.page===p);});
   Array.prototype.forEach.call(document.querySelectorAll(".page"),function(x){x.classList.toggle("visible",x.id==="page-"+p);});
   window.scrollTo(0,0);
+  /* TODAYパネルはホームとタイマーで常時表示。単一要素をアクティブ側へ移す */
+  var panel=document.querySelector(".panel");
+  if(p==="home"||p==="timer"){ $("page-"+p).appendChild(panel); panel.hidden=false; renderPanel(); }
+  else { panel.hidden=true; }
   if(p==="rec"){viewKey=dayKey();renderRec();}
 }
 Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
