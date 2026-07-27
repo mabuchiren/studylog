@@ -323,7 +323,7 @@ select{
 
 <!-- ===== タイマー(休憩用) ===== -->
 <section class="page" id="page-timer">
-  <div class="card">
+  <div class="card" id="tSetup">
     <div class="card-h">時間</div>
     <div class="segments">
       <span id="tSegMin" style="display:contents;"></span>
@@ -334,7 +334,7 @@ select{
     </div>
     <button class="btn" id="tStartBtn" style="width:100%;margin-top:14px;">計測を開始</button>
   </div>
-  <div class="spacer"></div>
+  <div class="spacer" id="tSpacer"></div>
 </section>
 
 <!-- ===== 記録 ===== -->
@@ -523,7 +523,7 @@ function startBreak(min){
   state.running={mode:"break",planMin:min,startTs:now,
     endTs:now+min*60000,pausedTotalMs:0,pauseStartTs:null,beeped:false,
     askAfterMs:min*60000+ASK_AFTER_MS};
-  save(); activateTab("home"); render();
+  save(); activateTab("timer"); render();   /* 休憩中はタイマータブのまま */
 }
 function togglePause(){
   var r=state.running; if(!r) return;
@@ -741,11 +741,17 @@ function checkStale(){
 /* --- 実行画面 --- */
 function renderRun(){
   var r=state.running;
-  $("setupView").hidden=!!r;
+  var brk=r&&r.mode==="break";
+  /* 実行中はどちらの設定画面も隠す(誤って二重起動できないようにも働く) */
+  $("setupView").hidden=!!r; $("spacer").hidden=!!r;
+  $("tSetup").hidden=!!r;    $("tSpacer").hidden=!!r;
   $("runView").hidden=!r;
-  $("spacer").hidden=!!r;
+  /* 実行画面を該当ページの先頭へ移す(集中=ホーム / 休憩=タイマー) */
+  if(r){
+    var host=brk?$("page-timer"):$("page-home");
+    if($("runView").parentElement!==host) host.insertBefore($("runView"),host.firstChild);
+  }
   if(!r) return;
-  var brk=r.mode==="break";
   $("runSubj").textContent=(brk?"休憩":r.subject)+" ・ "+r.planMin+"分";
   $("stopBtn").textContent=brk?"終了":"終了して記録";
   /* 経過ぶんを埋める。予定に達したら満ちたまま */
@@ -758,7 +764,7 @@ function renderRun(){
   var rem=remainMs(),over=rem<=0;
   $("runBox").classList.toggle("over",over);
   $("runNum").textContent=over?("+"+fmtMS(-rem)):fmtMS(rem);
-  $("runTag").textContent=isPaused()?"一時停止中":(over?"超過 ・ 続けたいだけ続けてOK":"");
+  $("runTag").textContent=isPaused()?"一時停止中":(over?"超過":"");
   $("pauseBtn").textContent=isPaused()?"再開":"一時停止";
   if(over&&!r.beeped&&!isPaused()){r.beeped=true;beep();alertZero();save();}
 }
